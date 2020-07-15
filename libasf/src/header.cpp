@@ -994,6 +994,25 @@ asf_metadata_t * ASFParser::asf_header_metadata(asf_object_header_t *header) {
                 ret->metadata[i].key = asf_utf8_from_utf16le(current->data + position+6, name_len);
                 if (ret->metadata[i].key == NULL) {
                     ALOGD("Key is NULL !");
+
+                    /* Clean up the already allocated parts and return */
+                    for (i=0; i<ret->content_count; i++) {
+                        if (ret->content[i].key) free(ret->content[i].key);
+                        if (ret->content[i].value) free(ret->content[i].value);
+                    }
+                    if (ret->content) free(ret->content);
+                    for (i=0; i<ret->extended_count; i++) {
+                        if (ret->extended[i].key) free(ret->extended[i].key);
+                        if (ret->extended[i].value) free(ret->extended[i].value);
+                    }
+                    if (ret->extended) free(ret->extended);
+                    for (i=0; i<ret->metadata_count; i++) {
+                        if (ret->metadata[i].key) free(ret->metadata[i].key);
+                        if (ret->metadata[i].value) free(ret->metadata[i].value);
+                    }
+                    if (ret->metadata) free(ret->metadata);
+                    free(ret);
+
                     return NULL;
                 }
                 type = ASFByteIO::asf_byteio_getWLE(current->data + position);

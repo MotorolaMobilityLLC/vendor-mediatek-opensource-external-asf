@@ -191,6 +191,13 @@ int ASFParser::asf_data_read_payloads(asf_packet_t *packet,
                 if (!tempptr) {
                     return ASF_ERROR_OUTOFMEM;
                 }
+
+                if(packet->payloads != NULL){
+                    ALOGE("asf_data_read_payloads free payloads to avoid memory leak address:%p\n",
+                          packet->payloads);
+                    free(packet->payloads);
+                }
+
                 packet->payloads = (asf_payload_t *)tempptr;
                 packet->payloads_size = packet->payload_count;
             }

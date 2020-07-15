@@ -21,7 +21,7 @@
  * -------
  *   Morris Yang (mtk03147)
  *
- ****************************************************************************/ 
+ ****************************************************************************/
 //#define LOG_NDEBUG 0
 #undef LOG_TAG
 #define LOG_TAG "ASFExtractor"
@@ -314,7 +314,7 @@ ASFSource::ASFSource(ASFExtractor *extractor, size_t index)
     AMediaFormat *meta = mExtractor->mTracks.itemAt(index).mMeta;
     const char *mime;
     CHECK(AMediaFormat_getString(meta, AMEDIAFORMAT_KEY_MIME, &mime));
-    
+
     if (!strncasecmp(mime, "video/", 6)) {
         mType = ASF_VIDEO;
     } else if ((!strcasecmp(mime, MEDIA_MIMETYPE_AUDIO_WMA))
@@ -696,6 +696,11 @@ RESET_SEEK_TIME:
                         bIsKeyFrame=false;
                         mSeeking=true;
                     } else {
+                        if((*out) == NULL){
+                            ALOGE("GetNextMediaFrame data is NULL, return EOS");
+                            return AMEDIA_ERROR_END_OF_STREAM;
+                        }
+
                         AMediaFormat_getInt64((*out)->meta_data(), AMEDIAFORMAT_KEY_TIME_US, &keyTimeUs);
                         diff = keyTimeUs-seekTimeUs;
                         if (repeat_cnt < 10) {
@@ -959,6 +964,14 @@ media_status_t ASFSource::assembleAVCSizeNalToFrame(MediaBufferHelper **out) {
         mBuffer->set_range(mBuffer->range_offset() + nalSizeLength,
                 mBuffer->range_length() - nalSizeLength);
         MediaBufferBase *clone = MediaBufferBase::Create(3 + nalLength);
+        if (0 == clone) {
+           ALOGE("assembleAVCSizeNalToFrame: alloc memory fail about clone size=%d", nalLength);
+           *out = mBuffer;
+           mBuffer->release();
+           mBuffer = NULL;
+           return AMEDIA_ERROR_IO;
+       }
+
         data = (uint8_t *)clone->data();
         memcpy(data, startcode, 3);
         memcpy(data + 3, (char *)mBuffer->data() + mBuffer->range_offset(), nalLength);
@@ -1058,6 +1071,11 @@ media_status_t ASFSource::assembleMp3Frame(MediaBufferHelper **out) {
     int start = 0;
     uint32_t header=0;
     size_t frameSize;
+
+    if(mBuffer == NULL){
+        ALOGE("assembleMp3Frame error: mBuffer==NULL");
+        return AMEDIA_ERROR_END_OF_STREAM;
+    }
 
     // MP3 frame header start with 0xff
     if (mMP3Header >= 0) {
@@ -1672,6 +1690,11 @@ ASFErrorType ASFExtractor::GetNextMediaFrame(MediaBufferHelper **out, bool& bIsK
     }
 
     MediaBufferBase *buffer = MediaBufferBase::Create(current_frame_size);
+    if(buffer == NULL){
+        ALOGE("alloc memory fail!! size=%d", current_frame_size);
+        delete[] pBuffer;
+        return ASF_ERR_NO_MEMORY;
+    }
     uint8_t *data = (uint8_t *)buffer->data();
     memcpy(data, pBuffer, current_frame_size);
     buffer->set_range(0, current_frame_size);
@@ -1702,6 +1725,10 @@ ASFErrorType ASFExtractor::GetNextMediaPayload(uint8_t* aBuffer,
     asf_stream_type_t stream_type = ASF_STREAM_TYPE_UNKNOWN;
     //mStreamId = mExtractor->mTracks.itemAt(index).mTrackNum;
     pStreamProp = mAsfParser->asf_get_stream(mTracks.editItemAt(curTrackIndex).mTrackNum);
+    if(pStreamProp == NULL){
+        ALOGE("GetNextMediaPayload: asf_get_stream fail");
+        return ASF_END_OF_FILE;
+    }
     stream_type = pStreamProp->type;
 
     pNextPacket = mTracks.editItemAt(curTrackIndex).mNextPacket;
@@ -1717,6 +1744,10 @@ ASFErrorType ASFExtractor::GetNextMediaPayload(uint8_t* aBuffer,
                         curTrackIndex, pNextPacket->payload_count, ret);
                 if (ret <= 0) {  // should > 0 else is EOS, no data in file
                     asf_stream_t *pStreamProp = mAsfParser->asf_get_stream(mTracks.editItemAt(curTrackIndex).mTrackNum);
+                    if(pStreamProp == NULL){
+                        ALOGE("GetNextMediaPayload: asf_get_stream fail");
+                        return ASF_END_OF_FILE;
+                    }
 
                     if(pStreamProp->flags & ASF_STREAM_FLAG_EXTENDED) { //has Extended Stream Properties Object
                         //Avg. time for frame is 100-nanosec - arTimestamp unit is millisec.
@@ -2516,8 +2547,12 @@ bool ASFExtractor::ParseASF() {
             asf_stream_t * pStreamProp = NULL;
             asf_stream_type_t stream_type = ASF_STREAM_TYPE_UNKNOWN;
             pStreamProp = mAsfParser->asf_get_stream(i);
+            if(pStreamProp == NULL){
+                ALOGE("ParseASF: asf_get_stream fail i=%d", i);
+                return false;
+            }
             stream_type = pStreamProp->type;
-            void* pCodecSpecificData = NULL;  // video will set, audio not use
+            VC1SeqData* pCodecSpecificData = NULL;  // video will set, audio not use
             uint32_t CurCodecSpecificSize = 0;
 
             AMediaFormat_clear(meta);
@@ -2534,7 +2569,7 @@ bool ASFExtractor::ParseASF() {
                 mHasVideoTrack = true;
                 ALOGV("Stream %d is VIDEO: ", i);
 
-                pCodecSpecificData = (VC1SeqData*)calloc(1, sizeof(VC1SeqData));
+                pCodecSpecificData = (VC1SeqData *)calloc(1, sizeof(VC1SeqData));
                 if (pCodecSpecificData == NULL) {
                     ALOGE("[NO_MEMORY] calloc %zu error", sizeof(VC1SeqData));
                     return false;
@@ -2544,8 +2579,7 @@ bool ASFExtractor::ParseASF() {
                 if (!(pStreamProp->flags & ASF_STREAM_FLAG_AVAILABLE)) {
                     ALOGE("[ASF_ERROR]RetrieveWmvCodecSpecificData no codec specific info available");
                     continue;
-                } else if (false == RetrieveWmvCodecSpecificData(pStreamProp, meta,
-                        (VC1SeqData*)pCodecSpecificData)) {
+                } else if (false == RetrieveWmvCodecSpecificData(pStreamProp, meta, pCodecSpecificData)) {
                     ALOGV("no codec specific data, or unsupported video format ");
                     if (mIgnoreVideo == true) {
                         continue;
