@@ -59,7 +59,7 @@ typedef unsigned long long      uint64_t;
 
 
 #define  WAVE_FORMAT_WMA1               (0x0160)
-        /*Windows Media Audio V2 V7 V8 V9 / DivX audio (WMA) / Alex AC3 Audio*/
+        /*Windows Media Audio V2 V7 V8 V9 / audio (WMA) / Alex AC3 Audio*/
 #define  WAVE_FORMAT_WMA2               (0x0161) /*Windows Media Audio Professional V9 */
 #define  WAVE_FORMAT_WMA3               (0x0162) /*Windows Media Audio Lossless V9*/
 
@@ -79,8 +79,6 @@ typedef unsigned long long      uint64_t;
 //MPEG4
 #define FOURCC_MP4S     MAKEFOURCC('M','P','4','S')
 #define FOURCC_XVID     MAKEFOURCC('X','V','I','D')
-#define FOURCC_DIVX     MAKEFOURCC('D','I','V','X')
-#define FOURCC_DX50     MAKEFOURCC('D','X','5','0')
 #define FOURCC_MP4V     MAKEFOURCC('M','P','4','V')
 #define FOURCC_M4S2     MAKEFOURCC('M','4','S','2')
 //H264

@@ -2170,8 +2170,6 @@ bool ASFExtractor::RetrieveWmvCodecSpecificData(asf_stream_t *pStreamProp,
         // MPEG4
         case FOURCC_MP4S:
         case FOURCC_XVID:
-        case FOURCC_DIVX:
-        case FOURCC_DX50:
         case FOURCC_MP4V:
         case FOURCC_M4S2:
         {
