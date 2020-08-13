@@ -689,6 +689,11 @@ RESET_SEEK_TIME:
                             else return AMEDIA_ERROR_END_OF_STREAM;
                         }
                     } else if (ASF_FILE_READ_ERR == retVal) {  // not a frame data
+                        if((*out) == NULL){
+                            ALOGE("line:%d, GetNextMediaFrame data is NULL, return EOS", __LINE__);
+                            return AMEDIA_ERROR_END_OF_STREAM;
+                        }
+
                         AMediaFormat_getInt64((*out)->meta_data(), AMEDIAFORMAT_KEY_TIME_US, &keyTimeUs);
                         ALOGV("[ASF_ERROR] ASF_FILE_READ_ERR: ASF Video Seek Drop %lld ms", (long long)(keyTimeUs/1000));
                         (*out)->release();
@@ -697,7 +702,7 @@ RESET_SEEK_TIME:
                         mSeeking=true;
                     } else {
                         if((*out) == NULL){
-                            ALOGE("GetNextMediaFrame data is NULL, return EOS");
+                            ALOGE("line:%d, GetNextMediaFrame data is NULL, return EOS", __LINE__);
                             return AMEDIA_ERROR_END_OF_STREAM;
                         }
 

@@ -1027,6 +1027,24 @@ asf_metadata_t * ASFParser::asf_header_metadata(asf_object_header_t *header) {
                     ALOGE("error in parse %d metadata datalen=%d",i,data_length);
                     ret->metadata[i].value=NULL;
                     position += data_length;
+
+                     /* Clean up the already allocated parts and return */
+                    for (i=0; i<ret->content_count; i++) {
+                        if (ret->content[i].key) free(ret->content[i].key);
+                        if (ret->content[i].value) free(ret->content[i].value);
+                    }
+                    if (ret->content) free(ret->content);
+                    for (i=0; i<ret->extended_count; i++) {
+                        if (ret->extended[i].key) free(ret->extended[i].key);
+                        if (ret->extended[i].value) free(ret->extended[i].value);
+                    }
+                    if (ret->extended) free(ret->extended);
+                    for (i=0; i<ret->metadata_count; i++) {
+                        if (ret->metadata[i].key) free(ret->metadata[i].key);
+                        if (ret->metadata[i].value) free(ret->metadata[i].value);
+                    }
+                    if (ret->metadata) free(ret->metadata);
+                    free(ret);
                     return NULL;
                 }
 
