@@ -1770,6 +1770,8 @@ ASFErrorType ASFExtractor::GetNextMediaPayload(uint8_t* aBuffer,
                         ret, mTracks.editItemAt(curTrackIndex).mTrackNum);
                         return ASF_END_OF_FILE;
                     }
+                } else if (pNextPacket->payload_count == 0) {
+                    continue;
                 }
                 //updated Current Payload index
                 *CurPayloadIdx = 0;// first payload in the newly found packet

@@ -100,7 +100,11 @@ int ASFParser::asf_data_read_payloads(asf_packet_t *packet,
     asf_payload_t pl;
     int i, tmp, skip;
 
-    if (!packet || !data) return 0;
+    if (!packet || !data) return ASF_ERROR_INTERNAL;
+    if (packet->payload_count == 0) {
+        ALOGW("no payloads in the packet");
+        return ASF_ERROR_INTERNAL;
+    }
     skip = 0, i = 0;
     while (i < packet->payload_count) {
         uint8_t pts_delta = 0;
@@ -166,6 +170,10 @@ int ASFParser::asf_data_read_payloads(asf_packet_t *packet,
             }
 
             pl.datalen = GETVALUE2b(type, data + skip);
+            if (pl.datalen > datalen) {
+                ALOGE("pl.datalen %u is invalid, datalen %d", pl.datalen, datalen);
+                return ASF_ERROR_INVALID_LENGTH;
+            }
             skip += tmp;
         } else {
             pl.datalen = datalen - skip;
@@ -337,6 +345,11 @@ int ASFParser::asf_data_get_packet(asf_packet_t *packet) {
         packet->length = file->packet_size;
     }
 
+    if (packet->length == 0) {
+        ALOGE("asf_data_get_packet: error packet->length = 0");
+        return ASF_ERROR_INVALID_LENGTH;
+    }
+
     /* this is also really idiotic, if packet length is smaller than packet
      * size, we need to manually add the additional bytes into padding length
      */
@@ -387,8 +400,14 @@ int ASFParser::asf_data_get_packet(asf_packet_t *packet) {
             payload_length_type, packet_property, packet->payload_data,
             packet->payload_data_len - packet->padding_length);
     if (tmp < 0) {
-        ALOGE("asf_data_get_packet:error 11\n");
-        //return tmp;
+        /*
+         * To make video(which have some broken packets) can still be played.
+         * Ignore this error, but also should set packet->payload_count = 0
+         * to tell the caller this packet has no valid data and try next packet
+         */
+        ALOGE("ignore this packet error when reading payloads %d", tmp);
+        packet->payload_count = 0;
+        // return tmp;
     }
 
 		/*
