@@ -58,6 +58,10 @@ int ASFParser::asf_data_read_packet_data(asf_packet_t *packet, uint8_t flags,
     GETVALUE2b((flags >> 1) & 0x03, data);
     data += GETLEN2b((flags >> 1) & 0x03);
     packet->padding_length = GETVALUE2b((flags >> 3) & 0x03, data);
+    if (packet->padding_length > (len - datalen)) {
+        ALOGE("packet->padding_length is invalid %u", packet->padding_length);
+        return ASF_ERROR_INVALID_LENGTH;
+    }
     data += GETLEN2b((flags >> 3) & 0x03);
     packet->send_time = ASFByteIO::asf_byteio_getDWLE(data);
     data += 4;
@@ -395,6 +399,11 @@ int ASFParser::asf_data_get_packet(asf_packet_t *packet) {
     packet->payload_data = &packet->data[read];
     read += packet->payload_data_len;
 
+    if (packet->payload_data_len < packet->padding_length) {
+        ALOGE("bad packet: packet->payload_data_len %u < packet->padding_len %u",
+                packet->payload_data_len, packet->padding_length);
+        return ASF_ERROR_INVALID_LENGTH;
+    }
     /* The return value will be consumed bytes, not including the padding */
     tmp = asf_data_read_payloads(packet, file->preroll, packet_flags & 0x01,
             payload_length_type, packet_property, packet->payload_data,

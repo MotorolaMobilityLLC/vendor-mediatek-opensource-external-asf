@@ -344,7 +344,7 @@ void ASFParser::asf_packet_destroy(asf_packet_t *packet) {
 
 int64_t ASFParser::asf_seek_to_msec(int64_t msec) {
     uint64_t packet=0;
-    uint64_t new_msec;
+    uint64_t new_msec = 0;
     int k;
     bool seek_done=false;
 
@@ -352,8 +352,6 @@ int64_t ASFParser::asf_seek_to_msec(int64_t msec) {
         ALOGE("asf_seek_to_msec:error 1");
         return ASF_ERROR_INTERNAL;
     }
-
-    new_msec = msec - file->preroll;
 
     if (!(file->flags & ASF_FLAG_SEEKABLE) || !file->iostream.seek) {
         ALOGE("asf_seek_to_msec:error 2, flags %d", file->flags);
