@@ -251,8 +251,9 @@ private:
     int asf_parse_header_stream_properties(asf_stream_t *stream,
             uint8_t *objdata,uint32_t objsize);
     int asf_parse_header_extended_stream_properties(asf_stream_t *stream,
-            uint8_t *objdata,uint32_t objsize);
-    int asf_parse_index_parameters(asf_obj_index_parameters_t *index_parameters, uint8_t *objdata);
+            uint8_t *objdata, uint64_t objsize);
+    int asf_parse_index_parameters(asf_obj_index_parameters_t *index_parameters,
+            uint8_t *objdata, uint64_t objsize);
     /*ASF top level mandatory objects parsing function*/
     int asf_parse_header();
     int asf_parse_data();
