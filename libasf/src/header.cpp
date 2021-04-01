@@ -202,9 +202,9 @@ int ASFParser::asf_parse_header_stream_properties(asf_stream_t *stream,
 }
 
 int ASFParser::asf_parse_header_extended_stream_properties(asf_stream_t *stream,
-        uint8_t *objdata, uint32_t objsize) {
+        uint8_t *objdata, uint64_t objsize) {
     asf_stream_extended_t ext;
-    uint32_t datalen;
+    uint64_t datalen;
     uint8_t *data;
     uint16_t flags;
     int i;
@@ -230,14 +230,15 @@ int ASFParser::asf_parse_header_extended_stream_properties(asf_stream_t *stream,
 
     /* iterate through all name strings */
     for (i=0; i<ext.stream_name_count; i++) {
-        uint16_t strlen;
+        uint64_t strlen;
 
         if (datalen < 4) {
             return ASF_ERROR_INVALID_VALUE;
         }
 
-        strlen = ASFByteIO::asf_byteio_getWLE(data + 2);
-        if (strlen > datalen) {
+        strlen = ASFByteIO::asf_byteio_getWLE(data + 2);  // uint16_t strlen;
+        if (4 + strlen > datalen) {
+            ALOGE("stream error in Extended Stream Properties: invalid Stream Names");
             return ASF_ERROR_INVALID_LENGTH;
         }
 
@@ -248,14 +249,15 @@ int ASFParser::asf_parse_header_extended_stream_properties(asf_stream_t *stream,
 
     /* iterate through all extension systems */
     for (i=0; i<ext.num_payload_ext; i++) {
-        uint32_t extsyslen;
+        uint64_t extsyslen;
 
         if (datalen < 22) {
             return ASF_ERROR_INVALID_VALUE;
         }
 
-        extsyslen = ASFByteIO::asf_byteio_getDWLE(data + 18);
-        if (extsyslen > datalen) {
+        extsyslen = ASFByteIO::asf_byteio_getDWLE(data + 18);  // uint32_t extsyslen;
+        if (22 + extsyslen > datalen) {
+            ALOGE("stream error in Extended Stream Properties: invalid Payload Extension Systems");
             return ASF_ERROR_INVALID_LENGTH;
         }
 
@@ -475,9 +477,14 @@ int ASFParser::asf_parse_extended_content_description(asf_obj_extended_content_d
 }
 
 //add by qian
-int ASFParser::asf_parse_index_parameters(asf_obj_index_parameters_t *index_parameters, uint8_t *objdata) {
+int ASFParser::asf_parse_index_parameters(
+        asf_obj_index_parameters_t *index_parameters, uint8_t *objdata, uint64_t objsize) {
     index_parameters->index_entry_time_interval = ASFByteIO::asf_byteio_getDWLE(objdata);
     index_parameters->index_specifiers_count = ASFByteIO::asf_byteio_getWLE(objdata+4);
+    if (30 + 4 * index_parameters->index_specifiers_count > objsize) {
+        ALOGE("stream error in Index Parameters Object: invalid Index Specifiers");
+        return ASF_ERROR_INVALID_VALUE;
+    }
     index_parameters->index_specifiers_entry = (asf_index_specifiers_t*)
             malloc(index_parameters->index_specifiers_count * sizeof(asf_index_specifiers_t));
     if (index_parameters->index_specifiers_entry == NULL) return ASF_ERROR_OUTOFMEM;
@@ -654,6 +661,12 @@ int ASFParser::asf_parse_header_validate(asf_object_header_t *header) {
                 case GUID_METADATA:
                     if (size < 26) return ASF_ERROR_OBJECT_SIZE;
                     break;
+                case GUID_METADATA_LIBRARY:
+                    if (size < 26) {
+                        ALOGE("stream error in Metadata Library Object: invalid size");
+                        return ASF_ERROR_OBJECT_SIZE;
+                    }
+                    break;
                 case GUID_LANGUAGE_LIST:
                     if (size < 26) return ASF_ERROR_OBJECT_SIZE;
                     break;
@@ -678,7 +691,10 @@ int ASFParser::asf_parse_header_validate(asf_object_header_t *header) {
                 //Index Parameters Object
                 case GUID_INDEX_PARAMETERS_OBJECT:
                 {
-                    if (size < 30) return ASF_ERROR_OBJECT_SIZE;
+                    if (size < 34) {
+                        ALOGE("stream error in Index Parameters Object: invalid size");
+                        return ASF_ERROR_OBJECT_SIZE;
+                    }
                     int ret=0;
                     asf_obj_index_parameters_t* index_parameters=NULL;
 
@@ -689,7 +705,7 @@ int ASFParser::asf_parse_header_validate(asf_object_header_t *header) {
                         return ASF_ERROR_OUTOFMEM;
                     }
                     index_parameters = (asf_obj_index_parameters_t *)file->header->index_parameters;
-                    ret = asf_parse_index_parameters(index_parameters, current->data);
+                    ret = asf_parse_index_parameters(index_parameters, current->data, size);
                     if (ret < 0) {
                         ALOGE("[ASF_ERROR]parser GUID_INDEX_PARAMETERS_OBJECT error\n");
                         return ret;
@@ -861,7 +877,7 @@ asf_metadata_t * ASFParser::asf_header_metadata(asf_object_header_t *header) {
     }
     current = asf_header_get_object(header, GUID_EXTENDED_CONTENT_DESCRIPTION);
     if (current) {
-        int i, j, position;
+        int i, j;
 
         ret->extended_count = ASFByteIO::asf_byteio_getWLE(current->data);
         ret->extended = (asf_metadata_entry_t*)calloc(ret->extended_count, sizeof(asf_metadata_entry_t));
@@ -876,16 +892,20 @@ asf_metadata_t * ASFParser::asf_header_metadata(asf_object_header_t *header) {
             return NULL;
         }
 
-        position = 2;
+        uint64_t position = 2;
         for (i=0; i<ret->extended_count; i++) {
             uint16_t length, type;
 
+            if (position + 6 > current->datalen) {
+                ALOGE("stream error in Extended Content Description");
+                break;
+            }
             length = ASFByteIO::asf_byteio_getWLE(current->data + position);
             position += 2;
-            if (((uint16_t)position + length)> current->datalen) {
-                ALOGE("error in extended object key length = %d, tatal object length = %llu",
-                     length, (unsigned long long)current->datalen);
-                continue;
+
+            if (position + length + 4 > current->datalen) {
+                ALOGE("stream error in Extended Content Description: invalid name length %u", length);
+                break;
             }
             ret->extended[i].key = asf_utf8_from_utf16le(current->data + position, length);
             position += length;
@@ -899,13 +919,21 @@ asf_metadata_t * ASFParser::asf_header_metadata(asf_object_header_t *header) {
             ret->extended[i].size = length;
             ALOGV("ret->extended[%d].key %s, data_length %d", i, ret->extended[i].key, ret->extended[i].size);
 
-            if (!(ret->extended[i].size) || ((uint16_t)position + length)>current->datalen) {
-                ALOGE("error in extended object value length = %d, tatal object length = %llu",
-                     length, (unsigned long long)current->datalen);
-                ret->extended[i].value=NULL;
-                //  position += length;
-                continue;
+            if (!length || position + length > current->datalen) {
+                ALOGE("stream error in Extended Content Description: invalid value length %u", length);
+                break;
             }
+            // validate Descriptor Value
+            if ((type > 5) ||
+                    (type == 2 && length != 4) ||
+                    (type == 3 && length != 4) ||
+                    (type == 4 && length != 8) ||
+                    (type == 5 && length != 2)) {
+                ALOGW("stream error in Extended Content Description: value dismatch: type %u, length %u",
+                        type, length);
+                break;
+            }
+
             switch (type) {
                 case 0:
                     /* type of the value is a string */
@@ -1105,7 +1133,7 @@ asf_metadata_t * ASFParser::asf_header_metadata(asf_object_header_t *header) {
         //metadate library data
         current = asf_header_ext_get_object(header, GUID_METADATA_LIBRARY);
         if (current) {
-            int i, position;
+            int i;
             uint32_t j;
 
             ret->metadatalib_count = ASFByteIO::asf_byteio_getWLE(current->data);
@@ -1132,35 +1160,53 @@ asf_metadata_t * ASFParser::asf_header_metadata(asf_object_header_t *header) {
                 return NULL;
             }
 
-            position = 2;
+            uint64_t position = 2;
             for (i=0; i<ret->metadatalib_count; i++) {
-                uint32_t  reserve, name_len, data_length, type;
+                uint32_t name_len, data_length, type;
 
-                reserve = ASFByteIO::asf_byteio_getDWLE(current->data + position);
+                if (12 + position > current->datalen) {
+                    ALOGE("stream error in Metadata Library Object");
+                    break;
+                }
                 position += 4; //language+stream number
 
                 name_len = ASFByteIO::asf_byteio_getWLE(current->data + position);
                 position += 2;
 
-                ret->metadatalib[i].key = asf_utf8_from_utf16le(current->data + position+6, name_len);
-
                 type = ASFByteIO::asf_byteio_getWLE(current->data + position);
                 position += 2;
-
                 ret->metadatalib[i].value_type = type;
 
                 data_length = ASFByteIO::asf_byteio_getDWLE(current->data + position);
                 position += 4 ;
                 ret->metadatalib[i].size = data_length;
 
-                position += name_len ;
-                ALOGV("ret->metadatalib[%d].key %s, data_length %d", i, ret->metadatalib[i].key, data_length);
-                if (!(ret->metadatalib[i].size) || ret->metadatalib[i].size>current->datalen) {
-                    ALOGE("error in parse %d metadatalib datalen=%d",i,data_length);
-                    ret->metadatalib[i].value=NULL;
-                    position += data_length;
-                    continue;
+                if (position + name_len > current->datalen) {
+                    ALOGE("stream error in Metadata Library Object: invalid name_len %u", name_len);
+                    break;
                 }
+                ret->metadatalib[i].key = asf_utf8_from_utf16le(current->data + position, name_len);
+                position += name_len ;
+
+                ALOGV("ret->metadatalib[%d].key %s, data_length %d", i, ret->metadatalib[i].key, data_length);
+
+                if (!data_length || position + data_length > current->datalen) {
+                    ALOGE("stream error in Metadata Library Object: invalid data_length %u", data_length);
+                    break;
+                }
+
+                // validate Data Type and Length
+                if ((type > 6) ||
+                        (type == 2 && data_length != 2) ||
+                        (type == 3 && data_length != 4) ||
+                        (type == 4 && data_length != 8) ||
+                        (type == 5 && data_length != 2) ||
+                        (type == 6 && data_length != 16)) {
+                    ALOGW("stream error in Metadata Library Object: Data dismatch: type %u, length %u",
+                            type, data_length);
+                    break;
+                }
+
                 switch (type) {
                     case 0:
                         /* type of the value is a string */
