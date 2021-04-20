@@ -969,13 +969,14 @@ media_status_t ASFSource::assembleAVCSizeNalToFrame(MediaBufferHelper **out) {
         mBuffer->set_range(mBuffer->range_offset() + nalSizeLength,
                 mBuffer->range_length() - nalSizeLength);
         MediaBufferBase *clone = MediaBufferBase::Create(3 + nalLength);
-        if (0 == clone) {
-           ALOGE("assembleAVCSizeNalToFrame: alloc memory fail about clone size=%d", nalLength);
-           *out = mBuffer;
-           mBuffer->release();
-           mBuffer = NULL;
-           return AMEDIA_ERROR_IO;
-       }
+        if (clone == nullptr || clone->data() == nullptr) {
+            ALOGE("assembleAVCSizeNalToFrame: Allocation failure for size %u", nalLength);
+            if (clone != nullptr) delete clone;
+            *out = mBuffer;
+            mBuffer->release();
+            mBuffer = NULL;
+            return AMEDIA_ERROR_IO;
+        }
 
         data = (uint8_t *)clone->data();
         memcpy(data, startcode, 3);
@@ -1695,8 +1696,9 @@ ASFErrorType ASFExtractor::GetNextMediaFrame(MediaBufferHelper **out, bool& bIsK
     }
 
     MediaBufferBase *buffer = MediaBufferBase::Create(current_frame_size);
-    if(buffer == NULL){
-        ALOGE("alloc memory fail!! size=%d", current_frame_size);
+    if (buffer == nullptr || buffer->data() == nullptr) {
+        ALOGE("GetNextMediaFrame: Allocation failure for size %u", current_frame_size);
+        if (buffer != nullptr) delete buffer;
         delete[] pBuffer;
         return ASF_ERR_NO_MEMORY;
     }

@@ -429,7 +429,6 @@ int ASFParser::asf_parse_index_simple_index() {
     uint64_t entry_data_size;
     uint8_t *entry_data = NULL;
     int tmp;
-    uint32_t i;
     file->simple_index = NULL;
     iostream = &file->iostream;
     memset(idata, 0, 56);
@@ -471,15 +470,16 @@ int ASFParser::asf_parse_index_simple_index() {
     //in 100-nanosecond units.
     simple_index->max_packet_count = ASFByteIO::asf_byteio_getDWLE(idata + 48);
     simple_index->entry_count = ASFByteIO::asf_byteio_getDWLE(idata + 52);
+    uint64_t simple_index_entry_count = simple_index->entry_count;  // actually value is DW, uint32_t
 
-    if (simple_index->entry_count * 6 + 56 > simple_index->size) {
+    if (simple_index_entry_count * 6 + 56 > simple_index->size) {
         //entry_count:packet num 32 +packet count16 =6byte
         free(simple_index);
         ALOGE("[ASF_ERROR]invalid size 2 for index object\n");
         return ASF_ERROR_INVALID_LENGTH;
     }
 
-    entry_data_size = ((uint64_t)simple_index->entry_count) * 6;
+    entry_data_size = simple_index_entry_count * 6;
     if (entry_data_size > 0xffffff) {
         free(simple_index);
         ALOGE("[ASF_ERROR]ASF_ERROR_OUTOFMEM (%llu) for index object", (unsigned long long)entry_data_size);
@@ -503,7 +503,7 @@ int ASFParser::asf_parse_index_simple_index() {
 
     //ALOGD ("@@ index->entry_count = %d, index->entry_time_interval = %d\n", index->entry_count,
     //        index->entry_time_interval);
-    simple_index->entries = (asf_simple_index_entry_t*)malloc(simple_index->entry_count *
+    simple_index->entries = (asf_simple_index_entry_t*)malloc(simple_index_entry_count *
             sizeof(asf_simple_index_entry_t));
     if (!simple_index->entries) {
         free(simple_index);
@@ -511,9 +511,9 @@ int ASFParser::asf_parse_index_simple_index() {
         ALOGE("asf_parse_index_simple_index:error 3\n");
         return ASF_ERROR_OUTOFMEM;
     }
-    memset(simple_index->entries, 0, simple_index->entry_count * sizeof(asf_simple_index_entry_t));
+    memset(simple_index->entries, 0, simple_index_entry_count * sizeof(asf_simple_index_entry_t));
 
-    for (i=0; i<simple_index->entry_count; i++) {
+    for (uint64_t i = 0; i < simple_index_entry_count; i++) {
         simple_index->entries[i].packet_index = ASFByteIO::asf_byteio_getDWLE(entry_data + i*6);
         simple_index->entries[i].packet_count = ASFByteIO::asf_byteio_getWLE(entry_data + i*6 + 4);
         //ALOGD ("@@ entries[%d] packet_index = %d, packet_count = %d\n", i,
