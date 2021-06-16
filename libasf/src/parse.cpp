@@ -306,7 +306,18 @@ int ASFParser::asf_parse_header() {
 
                 if (ret < 0) {
                     /* error parsing header extension */
-                    free(tmp);
+                    // free sub-objects in header ext
+                    if (headerext) {
+                        asfint_object_t *current = headerext->first;
+                        asfint_object_t *next = nullptr;
+                        while (current) {
+                            next = current->next;
+                            free(current);
+                            current = next;
+                        }
+                    }
+
+                    free(tmp);  // free(headerext);
                     tmp = NULL;
                     return ret;
                 }

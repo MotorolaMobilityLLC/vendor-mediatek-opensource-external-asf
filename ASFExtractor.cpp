@@ -280,7 +280,7 @@ private:
     MediaBufferHelper *mBuffer;
 
     ASFSource(const ASFSource &);
-    ~ASFSource();
+    virtual ~ASFSource();
     ASFSource &operator=(const ASFSource &);
 };
 
@@ -353,7 +353,6 @@ ASFSource::ASFSource(ASFExtractor *extractor, size_t index)
 }
 
 ASFSource::~ASFSource() {
-    ALOGV("~ASFSource(): mStreamId %d, mType %d", mStreamId, mType);
     stop();
 }
 
