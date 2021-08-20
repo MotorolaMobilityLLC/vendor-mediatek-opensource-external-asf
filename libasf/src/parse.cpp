@@ -660,6 +660,7 @@ int ASFParser::asf_parse_index_index() {
     block_data = (uint8_t*)calloc(1, (4 + file->header->index_parameters->index_specifiers_count * 8) *
             sizeof(uint8_t));
     if (block_data == NULL) {
+        free(index->specifiers_entry);
         free(index);
         ALOGE("[ASF_ERROR]ASF_ERROR_OUTOFMEM for block_data size=%zu",
              (4 + file->header->index_parameters->index_specifiers_count * 8) * sizeof(uint8_t));
@@ -706,6 +707,7 @@ int ASFParser::asf_parse_index_index() {
         free(index->specifiers_entry);
         free(index);
         free(entry_data);
+        free(block_data);
         ALOGE("[ASF_ERROR]ASF_ERROR_OUTOFMEM for index object 3 \n");
         return ASF_ERROR_OUTOFMEM;
     }
