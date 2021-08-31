@@ -158,8 +158,12 @@ int ASFParser::asf_data_read_payloads(asf_packet_t *packet,
         }
 
         /* substract preroll value from pts since it's counted in */
-        pl.pts -= preroll;//??????????????
-        /* FIXME: check that pts is positive */
+        if (pl.pts < preroll) {
+            ALOGE("invalid length: pl.pts %u should at least preroll time %llu",
+                    pl.pts, (unsigned long long)preroll);
+            return ASF_ERROR_INVALID_LENGTH;
+        }
+        pl.pts -= preroll;
 
         if (multiple) {
             tmp = GETLEN2b(type);
