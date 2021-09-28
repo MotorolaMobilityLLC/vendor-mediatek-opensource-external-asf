@@ -687,6 +687,7 @@ int ASFParser::asf_parse_index_index() {
     if (!entry_data) {
         free(index->specifiers_entry);
         free(index);
+        free(block_data);
         ALOGE("[ASF_ERROR]ASF_ERROR_OUTOFMEM for index object2 \n");
         return ASF_ERROR_OUTOFMEM;
     }
