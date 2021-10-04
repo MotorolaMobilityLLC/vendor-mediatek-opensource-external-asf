@@ -236,6 +236,10 @@ static int mp3HeaderStartAt(const uint8_t *start, unsigned length, unsigned head
     for(i=0; i<length; i++) {
         code = (code<<8) + start[i];
         if ((code & kMP3HeaderMask) == (header & kMP3HeaderMask)) {
+            if(i < 3){
+                return -1;
+            }
+
             // some files has no seq start code
             return (int)(i - 3u);
         }
