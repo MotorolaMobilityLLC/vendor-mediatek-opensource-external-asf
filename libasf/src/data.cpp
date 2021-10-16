@@ -178,11 +178,12 @@ int ASFParser::asf_data_read_payloads(asf_packet_t *packet,
             }
 
             pl.datalen = GETVALUE2b(type, data + skip);
-            if (pl.datalen > datalen) {
-                ALOGE("pl.datalen %u is invalid, datalen %d", pl.datalen, datalen);
+
+            skip += tmp;
+            if (pl.datalen > datalen - skip) {
+                ALOGE("pl.datalen %u is invalid, datalen %d skip=%d", pl.datalen, datalen, skip);
                 return ASF_ERROR_INVALID_LENGTH;
             }
-            skip += tmp;
         } else {
             pl.datalen = datalen - skip;
         }
