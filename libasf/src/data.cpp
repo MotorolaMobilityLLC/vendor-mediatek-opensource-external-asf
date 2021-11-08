@@ -105,8 +105,9 @@ int ASFParser::asf_data_read_payloads(asf_packet_t *packet,
     int i, tmp, skip;
 
     if (!packet || !data) return ASF_ERROR_INTERNAL;
-    if (packet->payload_count == 0) {
-        ALOGW("no payloads in the packet");
+    if (packet->payload_count == 0 || datalen == 0) {
+        ALOGW("no payloads in the packet: packet->payload_count %u, datalen %u",
+                packet->payload_count, datalen);
         return ASF_ERROR_INTERNAL;
     }
     skip = 0, i = 0;
@@ -125,8 +126,8 @@ int ASFParser::asf_data_read_payloads(asf_packet_t *packet,
         skip += tmp;
 
         if (pl.replicated_length > 1) {//min is 8bytes
-            if (pl.replicated_length < 8 || pl.replicated_length + skip > datalen) {
-            /* not enough data */
+            if (pl.replicated_length < 8 || pl.replicated_length > datalen - skip) {
+                /* not enough data */
                 return ASF_ERROR_INVALID_LENGTH;
             }
             pl.replicated_data = data + skip;

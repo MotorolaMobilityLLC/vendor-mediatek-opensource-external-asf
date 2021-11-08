@@ -326,7 +326,7 @@ int ASFParser::asf_get_packet(asf_packet_t *packet) {
 
     tmp = asf_data_get_packet(packet);
     if (tmp < 0) {
-        ALOGE("asf_get_packet:error 2,tmp=%d\n",tmp);
+        ALOGE("asf_data_get_packet: return err %d", tmp);
         return tmp;
     }
 
@@ -474,16 +474,17 @@ int64_t ASFParser::asf_seek_to_msec(int64_t msec) {
         /* convert msec into bytes per second and divide with packet_size */
         //
         //-->
-        packet = (msec * file->data->size /(file->real_duration))/file->packet_size;
+        packet = (file->data->size / file->real_duration * msec) / file->packet_size;
+        if (packet > file->data_packets_count) {  // check if seek right
+            ALOGE("asf_seek_to_msec: can't find right packet %llu, file->data_packets_count %llu",
+                 (unsigned long long)packet, (unsigned long long)file->data_packets_count);
+            return ASF_ERROR_SEEK;
+        }
 
         /* calculate the resulting position in the audio stream */
         //new_msec = packet * file->packet_size * (file->real_duration) /file->file_size;
         //-->
-        new_msec = packet * file->packet_size * (file->real_duration) /file->data->size;
-        if (packet > file->data_packets_count) {  // check if seek right
-            ALOGE("asf_seek_to_msec:finally,we can't find right position packet %llu, file->data_packets_count %llu",
-                 (unsigned long long)packet, (unsigned long long)file->data_packets_count);
-        }
+        new_msec = packet * file->packet_size * file->real_duration / file->data->size;
         seek_done =true;//anyhow, should be true now
         ALOGV("seek done by time + packet size calc");
     }

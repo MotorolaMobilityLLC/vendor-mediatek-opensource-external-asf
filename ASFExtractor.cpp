@@ -1754,6 +1754,13 @@ ASFErrorType ASFExtractor::GetNextMediaPayload(uint8_t* aBuffer,
                         curTrackIndex, pNextPacket->payload_count, ret);
                 if (ret <= 0) {  // should > 0 else is EOS, no data in file
                     asf_stream_t *pStreamProp = mAsfParser->asf_get_stream(mTracks.editItemAt(curTrackIndex).mTrackNum);
+
+                    /* should set packet->payload_count = 0, or else even this GetNextMediaFrame returns error
+                     * like ERROR_MALFORMED, but next read(GetNextMediaFrame, like from findThumbnail) will use
+                     * the same pNextPacket as the previous one to parse payloads.
+                     */
+                    pNextPacket->payload_count = 0;
+
                     if(pStreamProp == NULL){
                         ALOGE("GetNextMediaPayload: asf_get_stream fail");
                         return ASF_END_OF_FILE;
@@ -1962,7 +1969,8 @@ void ASFExtractor::findThumbnail() {
     MediaBufferHelper *out = NULL;
     ASFErrorType retVal = ASF_SUCCESS;
 
-    if (mSeekable) {
+    // find key frames from the beginning of the file
+    if (mSeekable && ASFSeekTo(0) >= 0) {
         for (size_t j = 0; j < ASF_THUMBNAIL_SCAN_SIZE; j++) {
             Frame[j] = NULL;
         }
