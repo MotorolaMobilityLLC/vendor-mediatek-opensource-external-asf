@@ -2516,6 +2516,12 @@ bool ASFExtractor::ParseASF() {
         ALOGV("mSeekable: %d, numpackets: %d, mPrerollTimeUs: %lld ms",
                 (mSeekable > 0), numpackets, (long long)(mPrerollTimeUs / 1000));
 
+        if (!mIsValidAsfFile) {
+            ALOGW("ParseASF: not a valid asf file, return false");
+            mIsAsfParsed = true;
+            return false;
+        }
+
 #if 1
         // retrieve meta data (optional)
         asf_metadata_t * pASFMetadata = mAsfParser->asf_header_get_metadata();

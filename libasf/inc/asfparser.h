@@ -117,14 +117,6 @@ public:
       */
     ASFErrorType IsAsfFile();
 
-    /**
-      * @brief Parses the MetaData (beginning or end) and positions
-      * the file pointer at the first audio frame.
-      *
-      * @returns error type.
-      */
-    ASFErrorType    ParseAsfFile();
-
     /*ASF Interface functions*/
     /* initialize the library using file on a local filesystem */
     asf_file_t *asf_open_file(asf_iostream_t *pStream);

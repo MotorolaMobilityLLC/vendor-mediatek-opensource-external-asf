@@ -71,13 +71,6 @@ ASFErrorType ASFParser::IsAsfFile() {
     return ASF_SUCCESS;
 }
 
-ASFErrorType ASFParser::ParseAsfFile() {
-    int status;
-    status = asf_init();
-    if (status < 0) return ASF_FILE_HDR_READ_ERR;
-    return ASF_SUCCESS;
-}
-
 asf_file_t * ASFParser::asf_open_file(asf_iostream_t *pStream) {
     asf_file_t *asffile = NULL;
     /*

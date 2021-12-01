@@ -115,6 +115,10 @@ int ASFParser::asf_data_read_payloads(asf_packet_t *packet,
         uint8_t pts_delta = 0;
         int compressed = 0;
         // Morris Yang 5.2.3.3 Page 53
+        if (skip >= datalen) {
+            ALOGE("return ASF_ERROR_INVALID_LENGTH, because skip %d >= datalen %u", skip, datalen);
+            return ASF_ERROR_INVALID_LENGTH;
+        }
         pl.stream_number = data[skip] & 0x7f;
         pl.key_frame = !!(data[skip] & 0x80);
         skip++;
