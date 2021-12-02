@@ -39,7 +39,7 @@
 **
 ******************************************************************************/
 ASFParser::ASFParser(void* source, asf_io_read_func_ptr read,
-        asf_io_write_func_ptr write, asf_io_seek_func_ptr seek) {
+        asf_io_write_func_ptr write, asf_io_seek_func_ptr seek, uint64_t file_size) {
     //initialize all member variables
     file = NULL;
     iError = ASF_SUCCESS;
@@ -57,6 +57,7 @@ ASFParser::ASFParser(void* source, asf_io_read_func_ptr read,
         ALOGE("Error failed to Initialize ASF parser");
         iError = ASF_INSUFFICIENT_DATA; //check for current error
     }
+    file->file_size = file_size;
 }
 
 ASFParser::~ASFParser() {
@@ -754,11 +755,6 @@ int ASFParser::asf_is_seekable() {
 asf_stream_t * ASFParser::asf_get_stream(uint8_t track) {
     if (!file || track >= ASF_MAX_STREAMS) return NULL;
     return &file->streams[track];
-}
-
-uint64_t ASFParser::asf_get_file_size() {
-    if (!file) return 0;
-    return file->file_size;
 }
 
 uint64_t ASFParser::asf_get_creation_date() {

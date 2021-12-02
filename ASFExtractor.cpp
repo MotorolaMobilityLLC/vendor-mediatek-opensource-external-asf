@@ -1873,7 +1873,7 @@ ASFExtractor::ASFExtractor(DataSourceHelper *source)
     ALOGV("ASFExtractor(): %p", this);
     mFileMeta = AMediaFormat_new();
     mDataSource->getSize((off64_t*)&mFileSize);
-    mAsfParser = new ASFParser((void*)this, asf_io_read_func, asf_io_write_func, asf_io_seek_func);
+    mAsfParser = new ASFParser((void*)this, asf_io_read_func, asf_io_write_func, asf_io_seek_func, mFileSize);
     if (!mAsfParser) {
         ALOGE("ASFExtractor(): ASFParser creation failed");
     }

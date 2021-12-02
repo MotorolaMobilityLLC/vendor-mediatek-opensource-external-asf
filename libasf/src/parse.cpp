@@ -172,9 +172,10 @@ int ASFParser::asf_parse_header() {
 
     /* read the object and check its size value */
     asf_parse_read_object((asfint_object_t *) header, hdata);
-    if (header->size < 30) {
+    if (header->size < 30 || header->size >= file->file_size) {
         /* invalid size for header object */
-        ALOGE("asf_parse_header:error 2");
+        ALOGE("asf_parse_header: error object size %llu (< 30 or >= file_size %llu)",
+                (unsigned long long)header->size, (unsigned long long)file->file_size);
         return ASF_ERROR_OBJECT_SIZE;
     }
     /* to check not ASF file type */

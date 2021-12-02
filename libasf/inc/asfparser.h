@@ -100,7 +100,7 @@ public:
       * @returns None
       */
     ASFParser(void* source, asf_io_read_func_ptr read,
-            asf_io_write_func_ptr write, asf_io_seek_func_ptr seek);
+            asf_io_write_func_ptr write, asf_io_seek_func_ptr seek, uint64_t file_size);
 
     /**
       * @brief Destructor.
@@ -174,9 +174,6 @@ public:
 
     /* return non-zero if the file is seekable, 0 otherwise */
     int asf_is_seekable();
-
-    /* get size of the ASF file in bytes */
-    uint64_t asf_get_file_size();
 
     /* get creation date in 100-nanosecond units since Jan 1, 1601 GMT
        this value should be ignored for broadcasts */
