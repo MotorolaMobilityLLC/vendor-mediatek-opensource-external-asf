@@ -134,7 +134,7 @@ public:
 
 protected:
     bool ParseASF();
-    int64_t ASFSeekTo(uint32_t seekTimeMs);
+    int64_t ASFSeekTo(int64_t seekTimeMs);
 
     bool RetrieveWmvCodecSpecificData(asf_stream_t *pStreamProp, AMediaFormat *meta,
             VC1SeqData *pCodecSpecificData);

@@ -595,7 +595,6 @@ media_status_t ASFSource::read(
     int64_t seekTimeUs, keyTimeUs, seekTimeUsfake;
     ReadOptions::SeekMode mode;
     bool bIsKeyFrame = false;
-    bool bAdjustSeekTime = false;
     bool bNeedResetSeekTime = false;
     bool newBuffer = false;
     *out = NULL;
@@ -606,16 +605,6 @@ media_status_t ASFSource::read(
              (long long)seekTimeUs, mType, mode, mExtractor->mHasVideo);
         mSeeking = true;
 
-        //just for file-with-video-track, to seek accurately
-        /*
-        if(seekTimeUs==0) { //if seek to 0, not need to speed up
-            seekTimeUsfake = seekTimeUs;
-            bAdjustSeekTime = false;
-        } else {  //for speed up for finding the closet frame
-            seekTimeUsfake =seekTimeUs + mExtractor->mPrerollTimeUs;
-            bAdjustSeekTime = true;
-        }
-        */
         seekTimeUsfake = seekTimeUs;
         uint32_t repeat_cnt = 0;
         int64_t diff = 0;
@@ -626,23 +615,16 @@ media_status_t ASFSource::read(
 
 RESET_SEEK_TIME:
         if (bNeedResetSeekTime) {
-            if (bAdjustSeekTime) {
-                seekTimeUsfake = seekTimeUsfake - (int64_t) mExtractor->mPrerollTimeUs; //subtrack preroll time
-                bAdjustSeekTime = false;
-                ALOGV("ASFSource::read seek: RESET_SEEK_TIME once mPrerollTimeUs to %lld us", (long long)seekTimeUsfake);
+            if ((diff > 1000000ll) || (diff < -1000000ll)) {
+                seekTimeUsfake = seekTimeUsfake - (diff/2);
             } else {
-                if((diff > 1000000ll) || (diff < -1000000ll)) {
-                    seekTimeUsfake = seekTimeUsfake -(diff/2);
+                if (diff > 0) {
+                    seekTimeUsfake = seekTimeUsfake - 1000000ll;
+                } else {
+                    seekTimeUsfake = seekTimeUsfake + 1000000ll;
                 }
-                else {
-                    if (diff > 0) {
-                        seekTimeUsfake = seekTimeUsfake - 1000000ll;
-                    } else {
-                        seekTimeUsfake = seekTimeUsfake + 1000000ll;
-                    }
-                }
-                ALOGV("ASFSource::read seek: RESET_SEEK_TIME once again to %lld us", (long long)seekTimeUsfake);
             }
+            ALOGV("ASFSource::read seek: RESET_SEEK_TIME once again to %lld us", (long long)seekTimeUsfake);
 
             if (seekTimeUsfake < 0) {
                 seekTimeUsfake = 0;
@@ -1875,13 +1857,11 @@ ASFExtractor::ASFExtractor(DataSourceHelper *source)
     mDataSource->getSize((off64_t*)&mFileSize);
     mAsfParser = new ASFParser((void*)this, asf_io_read_func, asf_io_write_func, asf_io_seek_func, mFileSize);
     if (!mAsfParser) {
-        ALOGE("ASFExtractor(): ASFParser creation failed");
-    }
-    int retVal = mAsfParser->IsAsfFile();  // parse the file here
-    if (ASF_SUCCESS == retVal) {
-        mIsValidAsfFile = true;
+        ALOGE("ASFExtractor: ASFParser creation failed");
     } else {
-        mIsValidAsfFile = false;
+        if (ASF_SUCCESS == mAsfParser->IsAsfFile()) {  // parse the file here
+            mIsValidAsfFile = true;
+        }
     }
 }
 
@@ -2636,9 +2616,9 @@ bool ASFExtractor::ParseASF() {
     return true;
 }
 
-int64_t ASFExtractor::ASFSeekTo(uint32_t seekTimeMs) {
+int64_t ASFExtractor::ASFSeekTo(int64_t seekTimeMs) {
     int64_t _new_ts = mAsfParser->asf_seek_to_msec(seekTimeMs);
-    ALOGV("ASFSeekTo %d return %lld ms", seekTimeMs, (long long)_new_ts);
+    ALOGV("ASFSeekTo %lld return %lld ms", (long long)seekTimeMs, (long long)_new_ts);
     return _new_ts;
 }
 

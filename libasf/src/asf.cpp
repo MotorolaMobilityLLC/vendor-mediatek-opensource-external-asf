@@ -56,8 +56,9 @@ ASFParser::ASFParser(void* source, asf_io_read_func_ptr read,
     if (!file) {
         ALOGE("Error failed to Initialize ASF parser");
         iError = ASF_INSUFFICIENT_DATA; //check for current error
+    } else {
+        file->file_size = file_size;
     }
-    file->file_size = file_size;
 }
 
 ASFParser::~ASFParser() {
@@ -475,10 +476,7 @@ int64_t ASFParser::asf_seek_to_msec(int64_t msec) {
             return ASF_ERROR_SEEK;
         }
 
-        /* calculate the resulting position in the audio stream */
-        //new_msec = packet * file->packet_size * (file->real_duration) /file->file_size;
-        //-->
-        new_msec = packet * file->packet_size * file->real_duration / file->data->size;
+        new_msec = msec;
         seek_done =true;//anyhow, should be true now
         ALOGV("seek done by time + packet size calc");
     }
