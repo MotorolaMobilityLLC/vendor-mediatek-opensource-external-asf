@@ -392,11 +392,13 @@ int64_t ASFParser::asf_seek_to_msec(int64_t msec) {
 
         /* Fetch current packet from index entry structure */
         /* entry_time_interval between each index entry in 100-nanosecond units */
-        simple_index_entry = msec * 10000 /
-                file->simple_index->entry_time_interval;  // Morris Yang: index_entry is second unit
-        //<--add by qian
+        if (msec > INT64_MAX / 10000) {
+            simple_index_entry = file->simple_index->entry_count;
+        } else {
+            simple_index_entry = msec * 10000 / file->simple_index->entry_time_interval;
+        }
         if (simple_index_entry >= file->simple_index->entry_count) {
-            ALOGE("asf_seek_to_msec:error 6 by simple index");
+            ALOGW("asf_seek_to_msec: simple index - too big simple_index_entry");
             //should not return error, can seek by auido again
             //return ASF_ERROR_SEEK;
             seek_done = false;
