@@ -792,7 +792,7 @@ int ASFParser::asf_parse_index(int64_t next_index_position) {
         if (index->type == GUID_INDEX) {
             tmp = asf_parse_index_index();
         }
+        free(index);// re-parser the index
+        return (tmp == 0) ? ASF_ERROR_EOF : tmp;
     }
-    free(index);// re-parser the index
-    return tmp;
 }
